@@ -1,0 +1,92 @@
+/* Singapore Haze Map Styles */
+
+/* Ensure MapLibre canvas and container occupy full parent bounds */
+.maplibregl-map {
+  width: 100% !important;
+  height: 100% !important;
+  font-family: inherit;
+  position: absolute !important;
+  inset: 0 !important;
+}
+
+.maplibregl-canvas-container {
+  width: 100% !important;
+  height: 100% !important;
+}
+
+.maplibregl-canvas {
+  width: 100% !important;
+  height: 100% !important;
+  display: block !important;
+}
+
+/* Custom styled MapLibre popup */
+.maplibregl-popup {
+  z-index: 30;
+  max-width: 320px !important;
+}
+
+.maplibregl-popup-content {
+  padding: 0 !important;
+  border-radius: 1rem !important;
+  box-shadow: 0 10px 25px -5px rgba(15, 23, 42, 0.15), 0 8px 10px -6px rgba(15, 23, 42, 0.1) !important;
+  border: 1px solid rgba(226, 232, 240, 0.9) !important;
+  overflow: hidden;
+  background-color: #ffffff !important;
+}
+
+.maplibregl-popup-close-button {
+  top: 10px !important;
+  right: 12px !important;
+  padding: 4px 8px !important;
+  color: #64748b !important;
+  font-size: 18px !important;
+  font-weight: 600 !important;
+  border-radius: 9999px !important;
+  line-height: 1 !important;
+  transition: color 0.15s ease, background-color 0.15s ease;
+}
+
+.maplibregl-popup-close-button:hover {
+  background-color: #f1f5f9 !important;
+  color: #0f172a !important;
+}
+
+.maplibregl-popup-tip {
+  border-top-color: #ffffff !important;
+}
+
+/* User Location Marker Animation */
+.user-location-pin {
+  width: 22px;
+  height: 22px;
+  background-color: #2563eb;
+  border: 3px solid #ffffff;
+  border-radius: 50%;
+  box-shadow: 0 0 12px rgba(37, 99, 235, 0.6);
+  position: relative;
+  cursor: pointer;
+}
+
+.user-location-pin::after {
+  content: '';
+  position: absolute;
+  top: -8px;
+  left: -8px;
+  width: 32px;
+  height: 32px;
+  border-radius: 50%;
+  background-color: rgba(37, 99, 235, 0.25);
+  animation: pulse-ring 2s cubic-bezier(0.215, 0.61, 0.355, 1) infinite;
+}
+
+@keyframes pulse-ring {
+  0% {
+    transform: scale(0.6);
+    opacity: 0.9;
+  }
+  80%, 100% {
+    transform: scale(1.6);
+    opacity: 0;
+  }
+}

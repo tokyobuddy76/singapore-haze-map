@@ -1,0 +1,10 @@
+{
+  "name": "Singapore Haze Map",
+  "description": "Live air quality and haze conditions across Singapore with official government PSI and PM2.5 readings mapped on MapLibre GL.",
+  "requestFramePermissions": [
+    "geolocation"
+  ],
+  "majorCapabilities": [
+    "MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"
+  ]
+}
