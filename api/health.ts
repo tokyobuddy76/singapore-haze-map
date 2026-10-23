@@ -1,8 +1,14 @@
 /**
  * Vercel Serverless Function: GET /api/health
  * Health check endpoint reporting service status, timestamp, uptime,
- * and upstream Singapore Government API (api.data.gov.sg) connectivity.
+ * and upstream API connectivity (data.gov.sg and api.qrserver.com).
  */
+
+interface UpstreamEndpointStatus {
+  status: "reachable" | "degraded" | "unreachable";
+  latencyMs?: number;
+  error?: string;
+}
 
 interface HealthResponse {
   status: "healthy" | "degraded" | "unhealthy";
@@ -11,67 +17,113 @@ interface HealthResponse {
   timestamp: string;
   uptimeSeconds: number;
   upstream: {
-    dataGovSg: "reachable" | "degraded" | "unreachable";
-    latencyMs?: number;
-    error?: string;
+    dataGovSg: UpstreamEndpointStatus;
+    qrServer: UpstreamEndpointStatus;
   };
 }
 
 const startTime = Date.now();
 
 export default async function handler(req: any, res: any) {
-  const checkStart = Date.now();
-  let upstreamStatus: "reachable" | "degraded" | "unreachable" = "unreachable";
-  let latencyMs: number | undefined;
-  let upstreamError: string | undefined;
+  const timeoutMs = 4000;
 
-  // Check upstream data.gov.sg connectivity with a short 4-second timeout
-  const controller = new AbortController();
-  const timeoutId = setTimeout(() => controller.abort(), 4000);
+  // Probe 1: data.gov.sg
+  const checkDataGovSg = async (): Promise<UpstreamEndpointStatus> => {
+    const start = Date.now();
+    const controller = new AbortController();
+    const timeoutId = setTimeout(() => controller.abort(), timeoutMs);
 
-  try {
-    const headers: Record<string, string> = {
-      "User-Agent": "SingaporeHazeMap/1.0",
-      Accept: "application/json",
-    };
-    if (process.env.SINGAPORE_API_KEY) {
-      headers["api-key"] = process.env.SINGAPORE_API_KEY;
+    try {
+      const headers: Record<string, string> = {
+        "User-Agent": "SingaporeHazeMap/1.0",
+        Accept: "application/json",
+      };
+      if (process.env.SINGAPORE_API_KEY) {
+        headers["api-key"] = process.env.SINGAPORE_API_KEY;
+      }
+
+      const response = await fetch("https://api.data.gov.sg/v1/environment/psi", {
+        method: "GET",
+        headers,
+        signal: controller.signal,
+      });
+
+      clearTimeout(timeoutId);
+      const latencyMs = Date.now() - start;
+
+      if (response.ok) {
+        return { status: "reachable", latencyMs };
+      }
+      return {
+        status: "degraded",
+        latencyMs,
+        error: `HTTP ${response.status}`,
+      };
+    } catch (err: any) {
+      clearTimeout(timeoutId);
+      return { status: "unreachable", error: err?.message || "Timeout" };
     }
+  };
 
-    const upstreamRes = await fetch("https://api.data.gov.sg/v1/environment/psi", {
-      method: "GET",
-      headers,
-      signal: controller.signal,
-    });
+  // Probe 2: api.qrserver.com
+  const checkQrServer = async (): Promise<UpstreamEndpointStatus> => {
+    const start = Date.now();
+    const controller = new AbortController();
+    const timeoutId = setTimeout(() => controller.abort(), timeoutMs);
 
-    clearTimeout(timeoutId);
-    latencyMs = Date.now() - checkStart;
+    try {
+      const response = await fetch(
+        "https://api.qrserver.com/v1/create-qr-code/?size=50x50&data=healthcheck",
+        {
+          method: "GET",
+          signal: controller.signal,
+        }
+      );
 
-    if (upstreamRes.ok) {
-      upstreamStatus = "reachable";
-    } else {
-      upstreamStatus = "degraded";
-      upstreamError = `Upstream returned HTTP ${upstreamRes.status}`;
+      clearTimeout(timeoutId);
+      const latencyMs = Date.now() - start;
+
+      if (response.ok) {
+        return { status: "reachable", latencyMs };
+      }
+      return {
+        status: "degraded",
+        latencyMs,
+        error: `HTTP ${response.status}`,
+      };
+    } catch (err: any) {
+      clearTimeout(timeoutId);
+      return { status: "unreachable", error: err?.message || "Timeout" };
     }
-  } catch (err: any) {
-    clearTimeout(timeoutId);
-    upstreamStatus = "unreachable";
-    upstreamError = err?.message || "Connection timed out";
-  }
+  };
 
-  const isHealthy = upstreamStatus === "reachable";
-  const statusCode = isHealthy ? 200 : upstreamStatus === "degraded" ? 200 : 503;
+  const [dataGovSgStatus, qrServerStatus] = await Promise.all([
+    checkDataGovSg(),
+    checkQrServer(),
+  ]);
+
+  const allReachable =
+    dataGovSgStatus.status === "reachable" && qrServerStatus.status === "reachable";
+  const anyUnreachable =
+    dataGovSgStatus.status === "unreachable" && qrServerStatus.status === "unreachable";
+
+  const overallStatus = allReachable
+    ? "healthy"
+    : anyUnreachable
+    ? "unhealthy"
+    : "degraded";
+
+  const statusCode = overallStatus === "unhealthy" ? 503 : 200;
 
   const payload: HealthResponse = {
-    status: isHealthy ? "healthy" : upstreamStatus === "degraded" ? "degraded" : "unhealthy",
+    status: overallStatus,
     service: "singapore-haze-map",
     version: "1.0.0",
     timestamp: new Date().toISOString(),
     uptimeSeconds: Math.floor((Date.now() - startTime) / 1000),
     upstream: {
-      dataGovSg: upstreamStatus,
-      latencyMs,
-      ...(upstreamError ? { error: upstreamError } : {}),
+      dataGovSg: dataGovSgStatus,
+      qrServer: qrServerStatus,
     },
   };
 

@@ -29,6 +29,8 @@ export default defineConfig(() => {
               modulePath = '/api/health.ts';
             } else if (cleanUrl === '/api/psi') {
               modulePath = '/api/psi.ts';
+            } else if (cleanUrl === '/api/qr' || cleanUrl === '/api/qrcode') {
+              modulePath = '/api/qr.ts';
             }
 
             if (modulePath) {

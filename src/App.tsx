@@ -31,6 +31,7 @@ export default function App() {
   } | null>(null);
   const [isLocating, setIsLocating] = useState<boolean>(false);
   const [locationError, setLocationError] = useState<string | null>(null);
+  const [isQrModalOpen, setIsQrModalOpen] = useState<boolean>(false);
 
   // Load Haze Data from /api/haze
   const loadData = useCallback(async (isRefresh = false) => {
@@ -107,8 +108,30 @@ export default function App() {
             </p>
           </div>
 
-          {/* Status Indicator */}
-          <div className="flex items-center gap-3 shrink-0 text-right">
+          {/* Header Controls & Status */}
+          <div className="flex items-center gap-2.5 shrink-0 text-right">
+            <button
+              type="button"
+              onClick={() => setIsQrModalOpen(true)}
+              aria-label="View QR Code for mobile"
+              className="min-h-[38px] px-2.5 py-1.5 text-xs font-semibold text-slate-700 hover:text-slate-900 bg-slate-100 hover:bg-slate-200 active:bg-slate-300 rounded-xl transition-colors flex items-center gap-1.5"
+            >
+              <svg
+                className="w-4 h-4 text-slate-700"
+                fill="none"
+                stroke="currentColor"
+                viewBox="0 0 24 24"
+              >
+                <path
+                  strokeLinecap="round"
+                  strokeLinejoin="round"
+                  strokeWidth={2}
+                  d="M12 4v1m6 11h2m-6 0h-2v4m0-11v3m0 0h.01M12 12h4.01M16 20h4M4 12h4m12 0h.01M5 8h2a1 1 0 001-1V5a1 1 0 00-1-1H5a1 1 0 00-1 1v2a1 1 0 001 1zm12 0h2a1 1 0 001-1V5a1 1 0 00-1-1h-2a1 1 0 00-1 1v2a1 1 0 001 1zM5 20h2a1 1 0 001-1v-2a1 1 0 00-1-1H5a1 1 0 00-1 1v2a1 1 0 001 1z"
+                />
+              </svg>
+              <span className="hidden sm:inline">Mobile QR</span>
+            </button>
+
             {data?.summary.updatedAt && (
               <div className="hidden sm:flex flex-col items-end text-xs text-slate-500">
                 <span className="font-medium text-slate-700">
@@ -122,6 +145,72 @@ export default function App() {
           </div>
         </div>
       </header>
+
+      {/* QR Code Modal Dialog */}
+      {isQrModalOpen && (
+        <div
+          role="dialog"
+          aria-modal="true"
+          aria-labelledby="qr-modal-title"
+          className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-900/50 backdrop-blur-xs animate-in fade-in duration-150"
+        >
+          <div className="bg-white border border-slate-200 rounded-3xl p-6 max-w-sm w-full shadow-2xl relative text-center">
+            <button
+              type="button"
+              onClick={() => setIsQrModalOpen(false)}
+              aria-label="Close modal"
+              className="absolute top-4 right-4 text-slate-400 hover:text-slate-700 p-1.5 rounded-full hover:bg-slate-100 transition-colors"
+            >
+              <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+              </svg>
+            </button>
+
+            <div className="w-10 h-10 rounded-2xl bg-emerald-50 text-emerald-600 flex items-center justify-center mx-auto mb-3">
+              <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path
+                  strokeLinecap="round"
+                  strokeLinejoin="round"
+                  strokeWidth={2}
+                  d="M12 4v1m6 11h2m-6 0h-2v4m0-11v3m0 0h.01M12 12h4.01M16 20h4M4 12h4m12 0h.01M5 8h2a1 1 0 001-1V5a1 1 0 00-1-1H5a1 1 0 00-1 1v2a1 1 0 001 1zm12 0h2a1 1 0 001-1V5a1 1 0 00-1-1h-2a1 1 0 00-1 1v2a1 1 0 001 1zM5 20h2a1 1 0 001-1v-2a1 1 0 00-1-1H5a1 1 0 00-1 1v2a1 1 0 001 1z"
+                />
+              </svg>
+            </div>
+
+            <h3 id="qr-modal-title" className="text-base font-bold text-slate-900 mb-1">
+              Open on Mobile
+            </h3>
+            <p className="text-xs text-slate-500 mb-4">
+              Scan this QR code with your phone camera to view the live Singapore Haze Map.
+            </p>
+
+            {/* Dynamic Serverless QR Code Image from /api/qr */}
+            <div className="flex justify-center mb-4">
+              <div className="p-3 bg-white border border-slate-200 rounded-2xl shadow-xs">
+                <img
+                  src="/api/qr?size=240x240"
+                  alt="Singapore Haze Map Mobile QR Code"
+                  width={240}
+                  height={240}
+                  className="rounded-lg w-[200px] h-[200px] sm:w-[240px] sm:h-[240px]"
+                />
+              </div>
+            </div>
+
+            <div className="text-[11px] text-slate-400">
+              Generated via serverless <code className="font-mono text-slate-600">/api/qr</code> API
+            </div>
+
+            <button
+              type="button"
+              onClick={() => setIsQrModalOpen(false)}
+              className="mt-4 w-full py-2.5 text-xs font-semibold text-white bg-slate-900 hover:bg-slate-800 rounded-xl transition-colors"
+            >
+              Close
+            </button>
+          </div>
+        </div>
+      )}
 
       {/* Main Content Area */}
       <main className="flex-1 max-w-6xl w-full mx-auto px-3 sm:px-6 py-4 flex flex-col gap-4">
