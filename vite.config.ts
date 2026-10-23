@@ -13,30 +13,45 @@ export default defineConfig(() => {
       react(),
       tailwindcss(),
       {
-        name: 'haze-api-dev-server',
+        name: 'api-dev-server-middleware',
         configureServer(server) {
           server.middlewares.use(async (req, res, next) => {
-            if (req.url && req.url.startsWith('/api/haze')) {
+            if (!req.url?.startsWith('/api/')) {
+              return next();
+            }
+
+            const cleanUrl = req.url.split('?')[0];
+            let modulePath: string | null = null;
+
+            if (cleanUrl === '/api/haze') {
+              modulePath = '/api/haze.js';
+            } else if (cleanUrl === '/api/health') {
+              modulePath = '/api/health.ts';
+            } else if (cleanUrl === '/api/psi') {
+              modulePath = '/api/psi.ts';
+            }
+
+            if (modulePath) {
               try {
-                // Dynamically import api/haze.js to handle the request
-                const hazeModule = await server.ssrLoadModule('/api/haze.js');
-                if (typeof hazeModule.default === 'function') {
-                  await hazeModule.default(req, res);
+                const apiModule = await server.ssrLoadModule(modulePath);
+                if (typeof apiModule.default === 'function') {
+                  await apiModule.default(req, res);
                   return;
                 }
               } catch (err) {
-                console.error('Error in /api/haze middleware:', err);
+                console.error(`Error in ${modulePath} middleware:`, err);
                 res.statusCode = 503;
                 res.setHeader('Content-Type', 'application/json');
                 res.end(
                   JSON.stringify({
                     error:
-                      'Latest Singapore haze data is temporarily unavailable. Please try again.',
+                      'Service temporarily unavailable. Please try again.',
                   })
                 );
                 return;
               }
             }
+
             next();
           });
         },
